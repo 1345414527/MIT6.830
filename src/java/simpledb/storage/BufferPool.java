@@ -1,13 +1,14 @@
 package simpledb.storage;
 
+import com.sun.corba.se.impl.orb.DataCollectorBase;
 import simpledb.common.Database;
 import simpledb.common.Permissions;
 import simpledb.common.DbException;
 import simpledb.common.DeadlockException;
 import simpledb.transaction.TransactionAbortedException;
 import simpledb.transaction.TransactionId;
-import sun.misc.LRUCache;
 
+import javax.xml.crypto.Data;
 import java.io.*;
 
 import java.util.HashMap;
@@ -40,7 +41,9 @@ public class BufferPool {
     public static final int DEFAULT_PAGES = 50;
 
     private int numPages;
-    private Map<Integer,Page> buffer;
+//    private Map<Integer,Page> buffer;
+    private LRUCache<PageId,Page> buffer;
+
 
 
     /**
@@ -51,7 +54,8 @@ public class BufferPool {
     public BufferPool(int numPages) {
         // some code goes here
         this.numPages = numPages;
-        this.buffer = new HashMap<>(numPages);
+//        this.buffer = new HashMap<>(numPages);
+        this.buffer  = new LRUCache<>(numPages);
     }
     
     public static int getPageSize() {
@@ -85,16 +89,17 @@ public class BufferPool {
      */
     public  Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException {
-        if (!this.buffer.containsKey(pid.hashCode())) {
+        if (this.buffer.get(pid)==null) {
             // find the right page in DBFiles
             DbFile dbFile = Database.getCatalog().getDatabaseFile(pid.getTableId());
             Page page = dbFile.readPage(pid);
-            if (buffer.size() > numPages) {
+            if (buffer.getSize() > numPages) {
                 evictPage();
             }
-            buffer.put(pid.hashCode(), page);
+            buffer.put(pid, page);
+            return page;
         }
-        return this.buffer.get(pid.hashCode());
+        return this.buffer.get(pid);
     }
 
     /**
@@ -109,6 +114,7 @@ public class BufferPool {
     public  void unsafeReleasePage(TransactionId tid, PageId pid) {
         // some code goes here
         // not necessary for lab1|lab2
+
     }
 
     /**
@@ -159,6 +165,13 @@ public class BufferPool {
         throws DbException, IOException, TransactionAbortedException {
         // some code goes here
         // not necessary for lab1
+        DbFile dbFile = Database.getCatalog().getDatabaseFile(tableId);
+        //注意，insertTuple函数并不会
+        List<Page> pages = dbFile.insertTuple(tid, t);
+        for(Page page : pages){
+            page.markDirty(true,tid);
+            buffer.put(page.getId(),page);
+        }
     }
 
     /**
@@ -178,6 +191,11 @@ public class BufferPool {
         throws DbException, IOException, TransactionAbortedException {
         // some code goes here
         // not necessary for lab1
+        DbFile dbFile = Database.getCatalog().getDatabaseFile(t.getRecordId().getPageId().getTableId());
+        List<Page> pages = dbFile.deleteTuple(tid,t);
+        for(Page page: pages){
+            page.markDirty(true,tid);
+        }
     }
 
     /**
@@ -188,6 +206,24 @@ public class BufferPool {
     public synchronized void flushAllPages() throws IOException {
         // some code goes here
         // not necessary for lab1
+        LRUCache<PageId, Page>.DLinkedNode head = buffer.getHead();
+        LRUCache<PageId, Page>.DLinkedNode tail = buffer.getTail();
+        while(head!=tail){
+            Page page = head.value;
+            if(page!=null && page.isDirty()!=null){
+                DbFile dbFile = Database.getCatalog().getDatabaseFile(page.getId().getTableId());
+                //记录日志
+                try{
+                    Database.getLogFile().logWrite(page.isDirty(),page.getBeforeImage(),page);
+                    Database.getLogFile().force();
+
+                    dbFile.writePage(page);
+                }catch (IOException e){
+                    e.printStackTrace();
+                }
+            }
+            head = head.next;
+        }
 
     }
 
@@ -202,6 +238,16 @@ public class BufferPool {
     public synchronized void discardPage(PageId pid) {
         // some code goes here
         // not necessary for lab1
+        LRUCache<PageId, Page>.DLinkedNode head = buffer.getHead();
+        LRUCache<PageId, Page>.DLinkedNode tail = buffer.getTail();
+        while(head!=tail){
+            PageId key = head.key;
+            if(key!=null && key.equals(pid)){
+                buffer.remove(head);
+                return;
+            }
+            head = head.next;
+        }
     }
 
     /**
@@ -211,6 +257,19 @@ public class BufferPool {
     private synchronized  void flushPage(PageId pid) throws IOException {
         // some code goes here
         // not necessary for lab1
+        Page page = buffer.get(pid);
+
+        if(page.isDirty()!=null){
+            DbFile dbFile = Database.getCatalog().getDatabaseFile(pid.getTableId());
+            try{
+                Database.getLogFile().logWrite(page.isDirty(),page.getBeforeImage(),page);
+                Database.getLogFile().force();
+                page.markDirty(false,null);
+                dbFile.writePage(page);
+            }catch (IOException e){
+                e.printStackTrace();
+            }
+        }
     }
 
     /** Write all pages of the specified transaction to disk.
@@ -218,6 +277,25 @@ public class BufferPool {
     public synchronized  void flushPages(TransactionId tid) throws IOException {
         // some code goes here
         // not necessary for lab1|lab2
+        LRUCache<PageId, Page>.DLinkedNode head = buffer.getHead();
+        LRUCache<PageId, Page>.DLinkedNode tail = buffer.getTail();
+        while(head!=tail){
+            Page page = head.value;
+            if(page!=null && page.isDirty()!=null&&page.isDirty().equals(tid) ){
+                DbFile dbFile = Database.getCatalog().getDatabaseFile(page.getId().getTableId());
+                //记录日志
+                try{
+                    Database.getLogFile().logWrite(page.isDirty(),page.getBeforeImage(),page);
+                    Database.getLogFile().force();
+                    page.markDirty(false,null);
+
+                    dbFile.writePage(page);
+                }catch (IOException e){
+                    e.printStackTrace();
+                }
+            }
+            head = head.next;
+        }
     }
 
     /**
@@ -227,6 +305,28 @@ public class BufferPool {
     private synchronized  void evictPage() throws DbException {
         // some code goes here
         // not necessary for lab1
+        Page page = buffer.getTail().prev.value;
+        if(page!=null && page.isDirty()!=null){
+            findNotDirty();
+        }else{
+            //不是脏页没改过，不需要写磁盘
+            buffer.discard();
+        }
+    }
+
+    private void findNotDirty() throws DbException {
+        LRUCache<PageId, Page>.DLinkedNode head = buffer.getHead();
+        LRUCache<PageId, Page>.DLinkedNode tail = buffer.getTail();
+        tail = tail.prev;
+        while (head != tail) {
+            Page value = tail.value;
+            if (value != null && value.isDirty() == null) {
+                buffer.remove(tail);
+                return;
+            }
+            tail = tail.prev;
+        }
+        throw new DbException("no dirty page");
     }
 
 }

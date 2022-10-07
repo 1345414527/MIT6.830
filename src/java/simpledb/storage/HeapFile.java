@@ -78,7 +78,6 @@ public class HeapFile implements DbFile {
     /*
     以下有些方法并不会直接调用，而是通过BufferPool调用
      */
-
     // see DbFile.java for javadocs
     public Page readPage(PageId pid) {
         // some code goes here

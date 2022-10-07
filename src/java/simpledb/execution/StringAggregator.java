@@ -1,7 +1,13 @@
 package simpledb.execution;
 
 import simpledb.common.Type;
+import simpledb.storage.Field;
 import simpledb.storage.Tuple;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Knows how to compute some aggregate over a set of StringFields.
@@ -9,6 +15,14 @@ import simpledb.storage.Tuple;
 public class StringAggregator implements Aggregator {
 
     private static final long serialVersionUID = 1L;
+    private Map<Field, List<Field>> group;
+    private int afield;
+    private int gbfield;
+    private Type gbfieldtype;
+    private Op what;
+
+
+
 
     /**
      * Aggregate constructor
@@ -18,9 +32,13 @@ public class StringAggregator implements Aggregator {
      * @param what aggregation operator to use -- only supports COUNT
      * @throws IllegalArgumentException if what != COUNT
      */
-
     public StringAggregator(int gbfield, Type gbfieldtype, int afield, Op what) {
         // some code goes here
+        this.gbfield = gbfield;
+        this.afield = afield;
+        this.gbfieldtype = gbfieldtype;
+        this.what = what;
+        group = new HashMap<>();
     }
 
     /**
@@ -29,6 +47,20 @@ public class StringAggregator implements Aggregator {
      */
     public void mergeTupleIntoGroup(Tuple tup) {
         // some code goes here
+        Field afield = tup.getField(this.afield);
+        Field gbfield = null;
+        if(this.gbfield==-1){
+            gbfield = tup.getField(this.gbfield);
+        }
+        if(group.containsKey(gbfield)){
+            group.get(gbfield).add(afield);
+        }else{
+            List<Field> list = new ArrayList<>();
+            list.add(afield);
+            group.put(gbfield,list);
+        }
+
+
     }
 
     /**
@@ -41,7 +73,7 @@ public class StringAggregator implements Aggregator {
      */
     public OpIterator iterator() {
         // some code goes here
-        throw new UnsupportedOperationException("please implement me for lab2");
+        return new AggregateIter(group,gbfield,gbfieldtype,what);
     }
 
 }

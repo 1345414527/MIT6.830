@@ -309,7 +309,6 @@ public class HeapPage implements Page {
                 markSlotUsed(i,true);
                 return;
             }
-
         }
     }
 

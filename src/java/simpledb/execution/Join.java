@@ -1,5 +1,6 @@
 package simpledb.execution;
 
+import simpledb.storage.Field;
 import simpledb.transaction.TransactionAbortedException;
 import simpledb.common.DbException;
 import simpledb.storage.Tuple;
@@ -13,6 +14,13 @@ import java.util.*;
 public class Join extends Operator {
 
     private static final long serialVersionUID = 1L;
+    private JoinPredicate joinPredicate;
+    private OpIterator child1;
+    private OpIterator child2;
+    private TupleDesc tupleDesc;
+    private Iterator<Tuple> it;
+    private final List<Tuple> childTuple = new ArrayList<>();
+//    HashEquiJoin hashEquiJoin;
 
     /**
      * Constructor. Accepts two children to join and the predicate to join them
@@ -27,11 +35,18 @@ public class Join extends Operator {
      */
     public Join(JoinPredicate p, OpIterator child1, OpIterator child2) {
         // some code goes here
+        this.joinPredicate = p;
+        this.child1 = child1;
+        this.child2 = child2;
+        this.tupleDesc = TupleDesc.merge(child1.getTupleDesc(),child2.getTupleDesc());
+//        if(p.getOperator().equals(Predicate.Op.EQUALS)){
+//            hashEquiJoin = new HashEquiJoin(p,child1,child2);
+//        }
     }
 
     public JoinPredicate getJoinPredicate() {
         // some code goes here
-        return null;
+        return this.joinPredicate;
     }
 
     /**
@@ -41,7 +56,8 @@ public class Join extends Operator {
      * */
     public String getJoinField1Name() {
         // some code goes here
-        return null;
+        int field = this.joinPredicate.getField1();
+        return child1.getTupleDesc().getFieldName(field);
     }
 
     /**
@@ -51,7 +67,7 @@ public class Join extends Operator {
      * */
     public String getJoinField2Name() {
         // some code goes here
-        return null;
+        return child2.getTupleDesc().getFieldName(joinPredicate.getField2());
     }
 
     /**
@@ -60,20 +76,50 @@ public class Join extends Operator {
      */
     public TupleDesc getTupleDesc() {
         // some code goes here
-        return null;
+        return this.tupleDesc;
     }
 
     public void open() throws DbException, NoSuchElementException,
             TransactionAbortedException {
         // some code goes here
+        child1.open();
+        child2.open();
+
+        while(child1.hasNext()){
+            Tuple next1 = child1.next();
+            while(child2.hasNext()){
+                Tuple next2 = child2.next();
+                if(joinPredicate.filter(next1,next2)){
+                    Tuple mergeTuple = new Tuple(tupleDesc);
+                    Iterator<Field> fields1 = next1.fields();
+                    Iterator<Field> fields2 = next2.fields();
+                    int count = 0;
+                    while(fields1.hasNext()){
+                        mergeTuple.setField(count++,fields1.next());
+                    }
+                    while(fields2.hasNext()){
+                        mergeTuple.setField(count++,fields2.next());
+                    }
+                    childTuple.add(mergeTuple);
+                }
+            }
+            child2.rewind();
+        }
+        it = childTuple.iterator();
+        super.open();
     }
 
     public void close() {
         // some code goes here
+        child1.close();
+        child2.close();
+        it = null;
+        super.close();
     }
 
     public void rewind() throws DbException, TransactionAbortedException {
         // some code goes here
+        it = childTuple.iterator();
     }
 
     /**
@@ -96,18 +142,23 @@ public class Join extends Operator {
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         // some code goes here
+        if(it!=null && it.hasNext()){
+            return it.next();
+        }
         return null;
     }
 
     @Override
     public OpIterator[] getChildren() {
         // some code goes here
-        return null;
+        return new OpIterator[]{child1,child2};
     }
 
     @Override
     public void setChildren(OpIterator[] children) {
         // some code goes here
+        this.child1 = children[0];
+        this.child2 = children[1];
     }
 
 }

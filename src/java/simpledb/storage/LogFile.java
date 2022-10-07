@@ -568,6 +568,7 @@ public class LogFile {
     }
 
     public  synchronized void force() throws IOException {
+        //进行刷盘
         raf.getChannel().force(true);
     }
 

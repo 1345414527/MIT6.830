@@ -4,9 +4,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 自己实现的一个LRU cache
+ * 自己实现的一个LRU cache,主要就是map+链表实现
  */
 public class LRUCache<K,V> {
+
     class DLinkedNode {
         K key;
         V value;
@@ -110,11 +111,32 @@ public class LRUCache<K,V> {
         node.next.prev = node.prev;
     }
 
+    public void remove(DLinkedNode node){
+        removeNode(node);
+        cache.remove(node.key);
+        size--;
+    }
+
     public void addToHead(DLinkedNode node){
         node.prev = head;
         node.next = head.next;
         head.next.prev = node;
         head.next = node;
+    }
+
+    public synchronized void discard(){
+        // 如果超出容量，删除双向链表的尾部节点
+        DLinkedNode tail = removeTail();
+        // 删除哈希表中对应的项
+        cache.remove(tail.key);
+        size--;
+
+    }
+
+    private DLinkedNode removeTail() {
+        DLinkedNode res = tail.prev;
+        removeNode(res);
+        return res;
     }
 
 
