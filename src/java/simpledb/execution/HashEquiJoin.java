@@ -69,7 +69,6 @@ public class HashEquiJoin extends Operator {
                 return true;
         }
         return cnt > 0;
-
     }
 
     public void open() throws DbException, NoSuchElementException,
@@ -148,7 +147,6 @@ public class HashEquiJoin extends Operator {
             listIt = l.iterator();
 
             return processList();
-
         }
 
         // child2 is done: advance child1
