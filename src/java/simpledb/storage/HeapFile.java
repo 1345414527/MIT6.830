@@ -135,10 +135,11 @@ public class HeapFile implements DbFile {
             HeapPageId heapPageId = new HeapPageId(getId(),i);
             HeapPage heapPage = (HeapPage) Database.getBufferPool().getPage(tid,heapPageId,Permissions.READ_ONLY);
             if(heapPage==null){
-                //TODO 锁
+                Database.getBufferPool().unsafeReleasePage(tid,heapPageId);
                 continue;
             }
             if(heapPage.getNumEmptySlots()==0){
+                Database.getBufferPool().unsafeReleasePage(tid,heapPageId);
                 continue;
             }
             heapPage.insertTuple(t);
