@@ -23,26 +23,26 @@ import java.io.Serializable;
 public class BTreeEntry implements Serializable {
 
 	private static final long serialVersionUID = 1L;
-	
+
 	/**
 	 * The key of this entry
 	 * */
-	private Field key;
+	private Field key;  //内部节点中的key
 
 	/**
 	 * The left child page id
 	 * */
-	private BTreePageId leftChild;
+	private BTreePageId leftChild;  //左孩子的BTreePageId
 
 	/**
 	 * The right child page id
 	 * */
-	private BTreePageId rightChild;
+	private BTreePageId rightChild;  //右孩子的BTreePageId
 
 	/**
 	 * The record id of this entry
 	 * */
-	private RecordId rid; // null if not stored on any page
+	private RecordId rid; // 标识该entry所在的位置。（即该entry是哪个page中的）
 
 	/**
 	 * Constructor to create a new BTreeEntry

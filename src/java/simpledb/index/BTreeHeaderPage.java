@@ -21,18 +21,21 @@ import java.util.Arrays;
  *
  */
 public class BTreeHeaderPage implements Page {
+	// 脏页标记和事务id
 	private volatile boolean dirty = false;
 	private volatile TransactionId dirtier = null;
-	
+
+	// 索引的大小，也就是每一个指针的大小
 	final static int INDEX_SIZE = Type.INT_TYPE.getLen();
 
-	final BTreePageId pid;
-	final byte[] header;
-	final int numSlots;
+	final BTreePageId pid;  //当前节点的BTreePageId
+	final byte[] header;  //记录每一个page的使用情况，对应一个个pageNo
+	final int numSlots;   //记录能存储的page使用情况数量
 
-	private int nextPage; // next header page or 0
-	private int prevPage; // previous header page or 0
+	private int nextPage; // 下一个header page的pageNo，如果是最后一个，就是0
+	private int prevPage; // 上一个header page的pageNo，如果是第一个，就是0
 
+	// 存储旧的数据，oldDataLock是用于并发synchronized的锁
 	byte[] oldData;
 	private final Byte oldDataLock= (byte) 0;
 

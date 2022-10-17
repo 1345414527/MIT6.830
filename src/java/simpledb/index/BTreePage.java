@@ -10,7 +10,7 @@ import simpledb.storage.TupleDesc;
 import simpledb.transaction.TransactionId;
 
 /**
- * Each instance of BTreeInternalPage stores data for one page of a BTreeFile and 
+ * Each instance of BTreeInternalPage stores data for one page of a BTreeFile and
  * implements the Page interface that is used by BufferPool.
  *
  * @see BTreeFile
@@ -18,16 +18,21 @@ import simpledb.transaction.TransactionId;
  *
  */
 public abstract class BTreePage implements Page {
+	// 脏页标记和事务id
 	protected volatile boolean dirty = false;
 	protected volatile TransactionId dirtier = null;
 
+	// 索引的大小，也就是每一个指针的大小
+	// 以页节点为例，每一个页节点都有三个索引指针：left sibling pointer, right sibling pointer, parent pointer
 	protected final static int INDEX_SIZE = Type.INT_TYPE.getLen();
 
-	protected final BTreePageId pid;
-	protected final TupleDesc td;
-	protected final int keyField;
+	protected final BTreePageId pid; //当前节点的BTreePageId
+	protected final TupleDesc td;  //当前节点的tuple元数据
+	protected final int keyField;  //索引的关键字字段下标
 
+	//当前page的父page，如果是根节点那么就是0
 	protected int parent; // parent is always internal node or 0 for root node
+	// 存储旧的数据，oldDataLock是用于并发synchronized的锁
 	protected byte[] oldData;
 	protected final Byte oldDataLock= (byte) 0;
 
@@ -35,13 +40,13 @@ public abstract class BTreePage implements Page {
 	 * Create a BTreeInternalPage from a set of bytes of data read from disk.
 	 * The format of a BTreeInternalPage is a set of header bytes indicating
 	 * the slots of the page that are in use, some number of entry slots, and extra
-	 * bytes for the parent pointer, one extra child pointer (a node with m entries 
-	 * has m+1 pointers to children), and the category of all child pages (either 
+	 * bytes for the parent pointer, one extra child pointer (a node with m entries
+	 * has m+1 pointers to children), and the category of all child pages (either
 	 * leaf or internal).
 	 *  Specifically, the number of entries is equal to: <p>
 	 *          floor((BufferPool.getPageSize()*8 - extra bytes*8) / (entry size * 8 + 1))
 	 * <p> where entry size is the size of entries in this index node
-	 * (key + child pointer), which can be determined via the key field and 
+	 * (key + child pointer), which can be determined via the key field and
 	 * {@link Catalog#getTupleDesc}.
 	 * The number of 8-bit header words is equal to:
 	 * <p>
@@ -50,7 +55,7 @@ public abstract class BTreePage implements Page {
 	 * @see Database#getCatalog
 	 * @see Catalog#getTupleDesc
 	 * @see BufferPool#getPageSize()
-	 * 
+	 *
 	 * @param id - the id of this page
 	 * @param key - the field which the index is keyed on
 	 */
@@ -138,7 +143,7 @@ public abstract class BTreePage implements Page {
 	 * Returns the number of empty slots on this page.
 	 */
 	public abstract int getNumEmptySlots();
-	
+
 	/**
 	 * Returns true if associated slot on this page is filled.
 	 */

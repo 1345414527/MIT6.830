@@ -20,12 +20,13 @@ import java.io.*;
  *
  */
 public class BTreeLeafPage extends BTreePage {
-	private final byte[] header;
-	private final Tuple[] tuples;
-	private final int numSlots;
-	
-	private int leftSibling; // leaf node or 0
-	private int rightSibling; // leaf node or 0
+	private final byte[] header;  //记录slot的占用情况
+	private final Tuple[] tuples;  //存储该page的所有tuple
+	private final int numSlots;  //叶节点中能存储的tuple数量（即n-1）
+
+	// 页节点的双向链表结构
+	private int leftSibling; //左兄弟的pageNo，用于获取左兄弟的BTreePageId，为0则没有左兄弟
+	private int rightSibling; //右兄弟的pageNo，用于获取右兄弟的BTreePageId，为0则没有右兄弟
 
 	public void checkRep(int fieldid, Field lowerBound, Field upperBound, boolean checkoccupancy, int depth) {
 		Field prev = lowerBound;

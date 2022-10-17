@@ -15,9 +15,9 @@ public class BTreePageId implements PageId {
 	public final static int LEAF = 2;
 	public final static int HEADER = 3;
 
-	private final int tableId;
-	private final int pgNo;
-	private final int pgcateg;
+	private final int tableId; //该page所在的的table id
+	private final int pgNo;    //该page所在page的序号（table中的第几个页）
+	private final int pgcateg;  //用于标识BTreePage的类型，也就是ROOT_PTR、INTERNAL、LEAF、HEADER这四种类型
 
 	static public String categToString(int categ) {
 		switch (categ) {

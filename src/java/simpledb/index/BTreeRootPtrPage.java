@@ -15,18 +15,21 @@ import java.io.*;
  */
 public class BTreeRootPtrPage implements Page {
 	// size of this page
+	//这个page的大小
 	public final static int PAGE_SIZE = 9;
 
+	// 脏页标记和事务id
 	private boolean dirty = false;
 	private TransactionId dirtier = null;
 
+	// 当前节点的BTreePageId
 	private final BTreePageId pid;
 
-    private int root;
-	private int rootCategory;
-	private int header;
+	private int root; //保存当前根节点的pageNo
+	private int rootCategory;  //保存当前根节点的类型，INTERNAL或LEAF，当只有一个节点时，就是LEAF
+	private int header;  //保存当前header页的pageNo
 
-	private byte[] oldData;
+	private byte[] oldData;  //存储旧的数据
 
 	/**
 	 * Constructor.
