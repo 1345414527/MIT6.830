@@ -49,7 +49,7 @@ public class StringAggregator implements Aggregator {
         // some code goes here
         Field afield = tup.getField(this.afield);
         Field gbfield = null;
-        if(this.gbfield==-1){
+        if(this.gbfield!=-1){
             gbfield = tup.getField(this.gbfield);
         }
         if(group.containsKey(gbfield)){
